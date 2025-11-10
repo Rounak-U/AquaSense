@@ -7,6 +7,7 @@ from plotly.subplots import make_subplots
 import tensorflow as tf
 from tensorflow.keras.models import load_model
 from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
 import pickle
 import json
 from datetime import datetime, timedelta
@@ -412,8 +413,106 @@ def load_rainfall_data():
     except Exception as e:
         return None
 
+@st.cache_data
+def calculate_model_metrics():
+    """Calculate MAE, MSE, and R² score for the model"""
+    try:
+        # Load data
+        possible_paths = [
+            '../data/rainfall in india 1901-2015.csv',
+            'data/rainfall in india 1901-2015.csv',
+            '/home/rounak/Rainfall/data/rainfall in india 1901-2015.csv'
+        ]
+        
+        df = None
+        for path in possible_paths:
+            try:
+                df = pd.read_csv(path)
+                break
+            except:
+                continue
+        
+        if df is None:
+            return None, None, None, None, None
+        
+        # Preprocess data (same as training)
+        for month in ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']:
+            df[month] = df.groupby('SUBDIVISION')[month].transform(lambda x: x.fillna(x.mean()))
+        
+        df_long = df.melt(id_vars=['YEAR','SUBDIVISION'],
+                          value_vars=['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'],
+                          var_name='Month', value_name='Rainfall')
+        
+        month_map = {'JAN':1,'FEB':2,'MAR':3,'APR':4,'MAY':5,'JUN':6,
+                     'JUL':7,'AUG':8,'SEP':9,'OCT':10,'NOV':11,'DEC':12}
+        df_long['Month_Num'] = df_long['Month'].map(month_map)
+        
+        def get_season(month):
+            if month in [12,1,2]:
+                return 'Winter'
+            elif month in [3,4,5]:
+                return 'Pre-monsoon'
+            elif month in [6,7,8,9]:
+                return 'Monsoon'
+            else:
+                return 'Post-monsoon'
+        
+        df_long['Season'] = df_long['Month_Num'].apply(get_season)
+        
+        df_long = df_long.sort_values(['SUBDIVISION','YEAR','Month_Num'])
+        df_long['Rainfall_Lag1'] = df_long.groupby('SUBDIVISION')['Rainfall'].shift(12)
+        df_long = df_long.dropna()
+        
+        df_encoded = pd.get_dummies(df_long, columns=['SUBDIVISION','Season'], drop_first=True)
+        
+        X = df_encoded.drop(['Rainfall','Month'], axis=1)
+        y = df_encoded['Rainfall']
+        
+        # Train-test split
+        from sklearn.model_selection import train_test_split
+        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        
+        # Scale features
+        scaler = StandardScaler()
+        X_train = scaler.fit_transform(X_train)
+        X_test = scaler.transform(X_test)
+        
+        # Load model and make predictions
+        model_paths = [
+            '../models/ann_rainfall_model_fixed.h5',
+            '../models/ann_rainfall_model.h5',
+            'models/ann_rainfall_model_fixed.h5',
+            'models/ann_rainfall_model.h5',
+            '/home/rounak/Rainfall/models/ann_rainfall_model.h5'
+        ]
+        
+        model = None
+        for path in model_paths:
+            try:
+                model = load_model(path, compile=False)
+                break
+            except:
+                continue
+        
+        if model is None:
+            return None, None, None, None, None
+        
+        y_pred = model.predict(X_test, verbose=0)
+        y_pred = y_pred.flatten()
+        
+        mae = mean_absolute_error(y_test, y_pred)
+        mse = mean_squared_error(y_test, y_pred)
+        rmse = np.sqrt(mse)
+        r2 = r2_score(y_test, y_pred)
+        
+        return mae, mse, rmse, r2, len(y_test)
+        
+    except Exception as e:
+        return None, None, None, None, None
+
 model, model_loaded = load_model_data()
 df = load_rainfall_data()
+mae, mse, rmse, r2, test_samples = calculate_model_metrics()
 
 # Header
 st.markdown("""
@@ -662,7 +761,8 @@ if predict_button and st.session_state.get('show_results', False):
     with col_status_1:
         if model_loaded:
             st.success("AI Model Loaded")
-            st.metric("Model Accuracy", "83.15%", "R² Score")
+            st.metric("Model Accuracy (R²)", f"{r2*100:.2f}%" if r2 is not None else "N/A")
+            st.metric("Mean Absolute Error", f"{mae:.2f} mm" if mae is not None else "N/A")
         else:
             st.warning("AI Model Not Available")
             st.info("Using historical analysis for predictions")
@@ -670,8 +770,10 @@ if predict_button and st.session_state.get('show_results', False):
     with col_status_2:
         if df is not None:
             st.success("Rainfall Data Loaded")
-            st.metric("Data Coverage", "115+ Years", "1901-2015")
-            st.metric("Locations", "36 Regions", "Pan India")
+            st.metric("Mean Squared Error", f"{mse:.2f}" if mse is not None else "N/A")
+            st.metric("Root Mean Squared Error", f"{rmse:.2f} mm" if rmse is not None else "N/A")
+            if test_samples:
+                st.metric("Test Samples Evaluated", f"{test_samples} samples")
         else:
             st.error("Rainfall Data Not Loaded")
 
