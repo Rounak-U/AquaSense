@@ -45,7 +45,7 @@ Predict rainfall (mm) in India using historical data (1901–2015) with an Artif
 
 ### Running the Streamlit app
 
-From the project root (`/home/rounak/Rainfall`) you can either run the included launcher or directly run Streamlit:
+From the project root you can either run the included launcher or directly run Streamlit:
 
 ```bash
 # using the provided helper script (recommended)
