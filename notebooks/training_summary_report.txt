@@ -1,0 +1,51 @@
+
+                ANN RAINFALL PREDICTION MODEL - TRAINING REPORT               
+
+DATASET INFORMATION
+────────────────────────────────────────────────────────────────────────────────
+• Total Samples: 48960
+• Training Samples: 39168
+• Test Samples: 9792
+• Number of Features: 41
+• Target Variable: Rainfall (mm)
+
+MODEL ARCHITECTURE
+────────────────────────────────────────────────────────────────────────────────
+• Input Layer: 41 neurons
+• Hidden Layer 1: 128 neurons (ReLU activation) + Dropout(0.2)
+• Hidden Layer 2: 64 neurons (ReLU activation) + Dropout(0.2)
+• Output Layer: 1 neuron (Linear activation - Regression)
+• Loss Function: Mean Squared Error (MSE)
+• Optimizer: Adam (LR=0.001)
+
+TRAINING RESULTS
+────────────────────────────────────────────────────────────────────────────────
+• Epochs Trained: 100
+• Initial Training Loss: 7318.943848
+• Final Training Loss: 6042.686523
+• Loss Reduction: 17.44%
+
+TEST SET PERFORMANCE
+────────────────────────────────────────────────────────────────────────────────
+• Mean Absolute Error (MAE): 41.8065 mm
+• Root Mean Squared Error (RMSE): 72.7131 mm
+• R² Score: 0.8321 (83.21%)
+• Mean Absolute Percentage Error: 3408219724140200.0000%
+
+RESIDUAL ANALYSIS
+────────────────────────────────────────────────────────────────────────────────
+• Mean Residual: 0.8678 mm
+• Std Residual: 72.7080 mm
+• Range: [-589.9312, 853.3604] mm
+
+GENERATED VISUALIZATIONS
+────────────────────────────────────────────────────────────────────────────────
+✓ 01_training_metrics.png - Loss convergence and MAE curves
+✓ 02_loss_landscape_contour.png - 2D loss landscape contour
+✓ 03_learning_paths_comparison.png - Different learning rates
+✓ 04_trajectories_on_contour.png - Stable vs unstable paths
+✓ 05_prediction_analysis.png - Actual vs predicted plots
+✓ 06_confusion_matrix.png - Classification analysis
+
+STATUS: Model trained successfully!
+────────────────────────────────────────────────────────────────────────────────
